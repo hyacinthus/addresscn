@@ -125,11 +125,24 @@ func (c *Client) LoadCity(r io.Reader) {
 			Name:         name,
 			ProvinceCode: line[2],
 		}
+		// 代码字典
 		x, ok := c.city[code]
 		if ok {
 			panic(fmt.Sprintf("duplicate city code %s with name %s and %s", code, name, x))
 		}
 		c.city[code] = city
+		// 名称字典特殊处理直辖市 把 key 由"市辖区"改成直辖市名
+		switch code {
+		case "1101":
+			name = "北京市"
+		case "1201":
+			name = "天津市"
+		case "3101":
+			name = "上海市"
+		case "5001":
+			name = "重庆市"
+		}
+		// 名称字典
 		y, ok := c.cityR[name]
 		if ok {
 			panic(fmt.Sprintf("duplicate city name %s with code %s and %s", name, code, y))
