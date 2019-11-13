@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/hyacinthus/x/xobj"
 )
@@ -141,6 +142,10 @@ func (c *Client) LoadCity(r io.Reader) {
 			name = "上海市"
 		case "5001":
 			name = "重庆市"
+		}
+		// 跳过直辖县
+		if strings.Contains(name, "直辖县") {
+			continue
 		}
 		// 名称字典
 		y, ok := c.cityR[name]
