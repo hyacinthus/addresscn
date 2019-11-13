@@ -30,8 +30,13 @@ type Client struct {
 // NewFromCOS 从腾讯云对象存储获取数据 用了我的其他库 内网速度快
 func NewFromCOS(cos xobj.Client) *Client {
 	var client = &Client{
-		provider: "cos",
-		cos:      cos,
+		provider:  "cos",
+		cos:       cos,
+		province:  make(map[string]string),
+		provinceR: make(map[string]string),
+		city:      make(map[string]City),
+		cityR:     make(map[string]City),
+		area:      make(map[string]Area),
 	}
 	p, err := cos.Reader("/division/provinces.csv")
 	if err != nil {
