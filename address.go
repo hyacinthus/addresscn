@@ -99,7 +99,20 @@ func (c *Client) LoadProvince(r io.Reader) {
 			panic(fmt.Sprintf("duplicate province name %s with code %s and %s", name, code, y))
 		}
 		c.provinceR[name] = code
+		// 去除省字再来一遍
+		c.provinceR[strings.TrimSuffix(name, "省")] = code
 	}
+	// 特殊处理一些容易被叫错的省 反正能查出来就行
+	c.provinceR["广西"] = "45"
+	c.provinceR["广西省"] = "45"
+	c.provinceR["宁夏"] = "64"
+	c.provinceR["宁夏省"] = "64"
+	c.provinceR["新疆"] = "65"
+	c.provinceR["新疆省"] = "65"
+	c.provinceR["内蒙古"] = "15"
+	c.provinceR["内蒙古省"] = "15"
+	c.provinceR["西藏"] = "54"
+	c.provinceR["西藏省"] = "54"
 }
 
 // LoadCity load the city data from a io reader.
