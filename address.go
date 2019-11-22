@@ -25,7 +25,9 @@ type Client struct {
 	provinceR map[string]string // name-code
 	city      map[string]City   // code-city
 	cityR     map[string]City   // name-city
+	cityP     map[string][]City // provinceCode-citys
 	area      map[string]Area   // code-area
+	areaP     map[string][]Area // cityCode-areas
 }
 
 // NewFromCOS 从腾讯云对象存储获取数据 用了我的其他库 内网速度快
@@ -37,7 +39,9 @@ func NewFromCOS(cos xobj.Client) *Client {
 		provinceR: make(map[string]string),
 		city:      make(map[string]City),
 		cityR:     make(map[string]City),
+		cityP:     make(map[string][]City),
 		area:      make(map[string]Area),
+		areaP:     make(map[string][]Area),
 	}
 	p, err := cos.Reader("/division/provinces.csv")
 	if err != nil {
@@ -166,6 +170,12 @@ func (c *Client) LoadCity(r io.Reader) {
 			panic(fmt.Sprintf("duplicate city name %s with code %s and %s", name, code, y))
 		}
 		c.cityR[name] = city
+
+		// 存储省-市关系
+		if _, ok := c.cityP[line[2]]; !ok {
+			c.cityP[line[2]] = make([]City, 0, 99)
+		}
+		c.cityP[line[2]] = append(c.cityP[line[2]], city)
 	}
 }
 
@@ -199,5 +209,11 @@ func (c *Client) LoadArea(r io.Reader) {
 			panic(fmt.Sprintf("duplicate area code %s with name %s and %s", code, name, x))
 		}
 		c.area[code] = area
+
+		// 存储市-区关系
+		if _, ok := c.areaP[line[2]]; !ok {
+			c.areaP[line[2]] = make([]Area, 0, 99)
+		}
+		c.areaP[line[2]] = append(c.areaP[line[2]], area)
 	}
 }
