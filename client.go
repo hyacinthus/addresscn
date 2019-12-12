@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	ErrorNotFound = errors.New("the key not found")
+	ErrorNotFound    = errors.New("the key not found")
+	ErrorInvalidAddr = errors.New("invalid address")
 )
 
 // Client 地址解析客户端
@@ -27,6 +28,7 @@ type Client struct {
 	cityR     map[string]City   // name-city
 	cityP     map[string][]City // provinceCode-citys
 	area      map[string]Area   // code-area
+	areaR     map[string]Area   // name-area
 	areaP     map[string][]Area // cityCode-areas
 }
 
@@ -42,6 +44,7 @@ func NewFromCOS(cos xobj.Client) *Client {
 		cityP:     make(map[string][]City),
 		area:      make(map[string]Area),
 		areaP:     make(map[string][]Area),
+		areaR:     make(map[string]Area),
 	}
 	p, err := cos.Reader("/division/provinces.csv")
 	if err != nil {
@@ -109,10 +112,13 @@ func (c *Client) LoadProvince(r io.Reader) {
 	// 特殊处理一些容易被叫错的省 反正能查出来就行
 	c.provinceR["广西"] = "45"
 	c.provinceR["广西省"] = "45"
+	c.provinceR["广西自治区"] = "45"
 	c.provinceR["宁夏"] = "64"
 	c.provinceR["宁夏省"] = "64"
+	c.provinceR["宁夏自治区"] = "64"
 	c.provinceR["新疆"] = "65"
 	c.provinceR["新疆省"] = "65"
+	c.provinceR["新疆自治区"] = "65"
 	c.provinceR["内蒙古"] = "15"
 	c.provinceR["内蒙古省"] = "15"
 	c.provinceR["西藏"] = "54"
@@ -170,6 +176,10 @@ func (c *Client) LoadCity(r io.Reader) {
 			panic(fmt.Sprintf("duplicate city name %s with code %s and %s", name, code, y))
 		}
 		c.cityR[name] = city
+		// 去除市|自治州|地区字再来一遍
+		c.cityR[strings.TrimSuffix(name, "市")] = city
+		c.cityR[strings.TrimSuffix(name, "自治州")] = city
+		c.cityR[strings.TrimSuffix(name, "地区")] = city
 
 		// 存储省-市关系
 		if _, ok := c.cityP[line[2]]; !ok {
@@ -209,6 +219,12 @@ func (c *Client) LoadArea(r io.Reader) {
 			panic(fmt.Sprintf("duplicate area code %s with name %s and %s", code, name, x))
 		}
 		c.area[code] = area
+		// 区存在同名情况，以cityCode作为区分
+		c.areaR[fmt.Sprintf("%s-%s", area.CityCode, name)] = area
+		// 去除市区|县|旗再来一遍
+		c.areaR[fmt.Sprintf("%s-%s", area.CityCode, strings.TrimSuffix(name, "区"))] = area
+		c.areaR[fmt.Sprintf("%s-%s", area.CityCode, strings.TrimSuffix(name, "县"))] = area
+		c.areaR[fmt.Sprintf("%s-%s", area.CityCode, strings.TrimSuffix(name, "旗"))] = area
 
 		// 存储市-区关系
 		if _, ok := c.areaP[line[2]]; !ok {

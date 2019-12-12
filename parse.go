@@ -1,5 +1,7 @@
 package addresscn
 
+import "strings"
+
 // ParseProvince 从名字解析省份代码
 func (c *Client) ParseProvince(name string) (string, error) {
 	p, ok := c.provinceR[name]
@@ -63,10 +65,71 @@ func (c *Client) GetCityName(code string) (string, error) {
 	return "", ErrorNotFound
 }
 
-// GetCityName 获取县区名称
+// GetAreaName 获取县区名称
 func (c *Client) GetAreaName(code string) (string, error) {
 	if area, ok := c.area[code]; ok {
 		return area.Name, nil
 	}
 	return "", ErrorNotFound
+}
+
+// ParseAddress 解析地址
+func (c *Client) ParseAddress(addr string) (pCode string, cCode string, aCode string, err error) {
+	cAddr := addr
+	for k, v := range c.provinceR {
+		if strings.HasPrefix(addr, k) {
+			pCode = v
+			switch k {
+			case "北京":
+			case "北京市":
+			case "天津":
+			case "天津市":
+			case "重庆":
+			case "重庆市":
+			case "上海":
+			case "上海市":
+			default:
+				cAddr = strings.TrimPrefix(addr, k)
+				cAddr = strings.TrimPrefix(cAddr, "省")
+				cAddr = strings.TrimPrefix(cAddr, "市")
+				cAddr = strings.TrimPrefix(cAddr, "自治区")
+			}
+			break
+		}
+	}
+	aAddr := cAddr
+	for k, v := range c.cityR {
+		if strings.HasPrefix(cAddr, k) {
+			if len(pCode) == 0 {
+				pCode = v.ProvinceCode
+			} else if pCode != v.ProvinceCode {
+				// 省ID对不上则直接返回，只解析到省
+				err = ErrorInvalidAddr
+				return
+			}
+			cCode = v.Code
+			aAddr = strings.TrimPrefix(cAddr, k)
+			aAddr = strings.TrimPrefix(aAddr, "市")
+			aAddr = strings.TrimPrefix(aAddr, "自治州")
+			aAddr = strings.TrimPrefix(aAddr, "地区")
+		}
+	}
+	// 若省市找不到，直接返回，必须包含省市
+	if pCode == "" || cCode == "" {
+		err = ErrorInvalidAddr
+		return
+	}
+	for k, v := range c.areaR {
+		area := strings.Split(k, "-")
+		if strings.HasPrefix(aAddr, area[1]) {
+			if pCode == v.ProvinceCode && cCode == v.CityCode {
+				aCode = v.Code
+				return
+			}
+		}
+	}
+	if len(pCode) == 0 || len(cCode) == 0 || len(aCode) == 0 {
+		err = ErrorInvalidAddr
+	}
+	return
 }
