@@ -8,13 +8,3 @@ type Address struct {
 	Detail       string `json:"detail" gorm:"type:varchar(255)"`      // 街道一下具体地址 必填
 	ZipCode      string `json:"zip_code" gorm:"type:varchar(6)"`      // 邮编 非必填
 }
-
-// AddressParse 地址解析
-type AddressParse struct {
-	ProvinceCode string `json:"province_code"`
-	ProvinceName string `json:"province_name"`
-	CityCode     string `json:"city_code"`
-	CityName     string `json:"city_name"`
-	AreaCode     string `json:"area_code"`
-	AreaName     string `json:"area_name"`
-}

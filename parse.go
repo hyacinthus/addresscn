@@ -74,12 +74,11 @@ func (c *Client) GetAreaName(code string) (string, error) {
 }
 
 // ParseAddress 解析地址
-func (c *Client) ParseAddress(addr string) (result AddressParse, err error) {
+func (c *Client) ParseAddress(addr string) (result Address, err error) {
 	cAddr := addr
 	for k, v := range c.provinceR {
 		if strings.HasPrefix(addr, k) {
 			result.ProvinceCode = v
-			result.ProvinceName = c.province[v]
 			switch k {
 			case "北京":
 			case "北京市":
@@ -103,14 +102,12 @@ func (c *Client) ParseAddress(addr string) (result AddressParse, err error) {
 		if strings.HasPrefix(cAddr, k) {
 			if len(result.ProvinceCode) == 0 {
 				result.ProvinceCode = v.ProvinceCode
-				result.ProvinceName = c.province[v.ProvinceCode]
 			} else if result.ProvinceCode != v.ProvinceCode {
 				// 省ID对不上则直接返回，只解析到省
 				err = ErrorInvalidAddr
 				return
 			}
 			result.CityCode = v.Code
-			result.CityName = c.city[v.Code].Name
 			aAddr = strings.TrimPrefix(cAddr, k)
 			aAddr = strings.TrimPrefix(aAddr, "市")
 			aAddr = strings.TrimPrefix(aAddr, "自治州")
@@ -127,7 +124,7 @@ func (c *Client) ParseAddress(addr string) (result AddressParse, err error) {
 		if strings.HasPrefix(aAddr, area[1]) {
 			if result.ProvinceCode == v.ProvinceCode && result.CityCode == v.CityCode {
 				result.AreaCode = v.Code
-				result.AreaName = c.area[v.Code].Name
+				result.Detail = strings.TrimPrefix(aAddr, area[1])
 				return
 			}
 		}
