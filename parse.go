@@ -74,11 +74,12 @@ func (c *Client) GetAreaName(code string) (string, error) {
 }
 
 // ParseAddress 解析地址
-func (c *Client) ParseAddress(addr string) (pCode string, cCode string, aCode string, err error) {
+func (c *Client) ParseAddress(addr string) (result AddressParse, err error) {
 	cAddr := addr
 	for k, v := range c.provinceR {
 		if strings.HasPrefix(addr, k) {
-			pCode = v
+			result.ProvinceCode = v
+			result.ProvinceName = c.province[v]
 			switch k {
 			case "北京":
 			case "北京市":
@@ -100,14 +101,16 @@ func (c *Client) ParseAddress(addr string) (pCode string, cCode string, aCode st
 	aAddr := cAddr
 	for k, v := range c.cityR {
 		if strings.HasPrefix(cAddr, k) {
-			if len(pCode) == 0 {
-				pCode = v.ProvinceCode
-			} else if pCode != v.ProvinceCode {
+			if len(result.ProvinceCode) == 0 {
+				result.ProvinceCode = v.ProvinceCode
+				result.ProvinceName = c.province[v.ProvinceCode]
+			} else if result.ProvinceCode != v.ProvinceCode {
 				// 省ID对不上则直接返回，只解析到省
 				err = ErrorInvalidAddr
 				return
 			}
-			cCode = v.Code
+			result.CityCode = v.Code
+			result.CityName = c.city[v.Code].Name
 			aAddr = strings.TrimPrefix(cAddr, k)
 			aAddr = strings.TrimPrefix(aAddr, "市")
 			aAddr = strings.TrimPrefix(aAddr, "自治州")
@@ -115,20 +118,21 @@ func (c *Client) ParseAddress(addr string) (pCode string, cCode string, aCode st
 		}
 	}
 	// 若省市找不到，直接返回，必须包含省市
-	if pCode == "" || cCode == "" {
+	if len(result.ProvinceCode) == 0 || len(result.CityCode) == 0 {
 		err = ErrorInvalidAddr
 		return
 	}
 	for k, v := range c.areaR {
 		area := strings.Split(k, "-")
 		if strings.HasPrefix(aAddr, area[1]) {
-			if pCode == v.ProvinceCode && cCode == v.CityCode {
-				aCode = v.Code
+			if result.ProvinceCode == v.ProvinceCode && result.CityCode == v.CityCode {
+				result.AreaCode = v.Code
+				result.AreaName = c.area[v.Code].Name
 				return
 			}
 		}
 	}
-	if len(pCode) == 0 || len(cCode) == 0 || len(aCode) == 0 {
+	if len(result.ProvinceCode) == 0 || len(result.CityCode) == 0 || len(result.AreaCode) == 0 {
 		err = ErrorInvalidAddr
 	}
 	return
