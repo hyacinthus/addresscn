@@ -90,9 +90,9 @@ func (c *Client) ParseAddress(addr string) (result Address, err error) {
 			case "上海市":
 			default:
 				cAddr = strings.TrimPrefix(addr, k)
-				cAddr = strings.TrimPrefix(cAddr, "省")
-				cAddr = strings.TrimPrefix(cAddr, "市")
 				cAddr = strings.TrimPrefix(cAddr, "自治区")
+				cAddr = strings.TrimPrefix(cAddr, "市")
+				cAddr = strings.TrimPrefix(cAddr, "省")
 			}
 			break
 		}
@@ -109,9 +109,9 @@ func (c *Client) ParseAddress(addr string) (result Address, err error) {
 			}
 			result.CityCode = v.Code
 			aAddr = strings.TrimPrefix(cAddr, k)
-			aAddr = strings.TrimPrefix(aAddr, "市")
-			aAddr = strings.TrimPrefix(aAddr, "自治州")
 			aAddr = strings.TrimPrefix(aAddr, "地区")
+			aAddr = strings.TrimPrefix(aAddr, "自治州")
+			aAddr = strings.TrimPrefix(aAddr, "市")
 		}
 	}
 	// 若省市找不到，直接返回，必须包含省市
@@ -124,7 +124,10 @@ func (c *Client) ParseAddress(addr string) (result Address, err error) {
 		if strings.HasPrefix(aAddr, area[1]) {
 			if result.ProvinceCode == v.ProvinceCode && result.CityCode == v.CityCode {
 				result.AreaCode = v.Code
-				result.Detail = strings.TrimPrefix(aAddr, area[1])
+				addr = strings.TrimPrefix(aAddr, area[1])
+				result.Detail = strings.TrimPrefix(result.Detail, "旗")
+				result.Detail = strings.TrimPrefix(result.Detail, "县")
+				result.Detail = strings.TrimPrefix(result.Detail, "区")
 				return
 			}
 		}
