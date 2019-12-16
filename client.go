@@ -240,6 +240,6 @@ func (c *Client) LoadArea(r io.Reader) {
 }
 
 // GetPCA load the province city area stream from cos.
-func (c *Client) GetPCA() (io.Reader, error) {
+func (c *Client) GetPCA() (io.ReadCloser, error) {
 	return c.cos.Reader("/division/pca-code.json")
 }
