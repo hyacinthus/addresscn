@@ -113,16 +113,21 @@ func (c *Client) LoadProvince(r io.Reader) {
 	c.provinceR["广西"] = "45"
 	c.provinceR["广西省"] = "45"
 	c.provinceR["广西自治区"] = "45"
+	c.provinceR["广西省自治区"] = "45"
 	c.provinceR["宁夏"] = "64"
 	c.provinceR["宁夏省"] = "64"
 	c.provinceR["宁夏自治区"] = "64"
+	c.provinceR["宁夏省自治区"] = "64"
 	c.provinceR["新疆"] = "65"
 	c.provinceR["新疆省"] = "65"
 	c.provinceR["新疆自治区"] = "65"
+	c.provinceR["新疆省自治区"] = "65"
 	c.provinceR["内蒙古"] = "15"
 	c.provinceR["内蒙古省"] = "15"
+	c.provinceR["内蒙古省自治区"] = "15"
 	c.provinceR["西藏"] = "54"
 	c.provinceR["西藏省"] = "54"
+	c.provinceR["西藏省自治区"] = "54"
 }
 
 // LoadCity load the city data from a io reader.
