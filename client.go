@@ -18,18 +18,18 @@ var (
 )
 
 // Client 地址解析客户端
+// 请调用方保证初始化完成后再使用
+// 这些数据在初始化阶段完成写入，提供服务后不再写入，所以只有并行读取，是线程安全的。
 type Client struct {
 	provider string // 数据来源 github(default)/http/cos
 	//url       string // http 模式时 文件的地址前缀 包含最后的斜线
 	cos       xobj.Client
-	province  map[string]string // code-name
-	provinceR map[string]string // name-code
-	city      map[string]City   // code-city
-	cityR     map[string]City   // name-city
-	cityP     map[string][]City // provinceCode-citys
-	area      map[string]Area   // code-area
-	areaR     map[string]Area   // name-area
-	areaP     map[string][]Area // cityCode-areas
+	province  map[string]string // code:name
+	provinceR map[string]string // name:code
+	city      map[string]City   // code:city
+	cityR     map[string]City   // name:city
+	area      map[string]Area   // code:area
+	areaR     map[string]Area   // cityCode-areaName:area
 }
 
 // NewFromCOS 从腾讯云对象存储获取数据 用了我的其他库 内网速度快
@@ -41,9 +41,7 @@ func NewFromCOS(cos xobj.Client) *Client {
 		provinceR: make(map[string]string),
 		city:      make(map[string]City),
 		cityR:     make(map[string]City),
-		cityP:     make(map[string][]City),
 		area:      make(map[string]Area),
-		areaP:     make(map[string][]Area),
 		areaR:     make(map[string]Area),
 	}
 	p, err := cos.Reader("/division/provinces.csv")
@@ -113,21 +111,18 @@ func (c *Client) LoadProvince(r io.Reader) {
 	c.provinceR["广西"] = "45"
 	c.provinceR["广西省"] = "45"
 	c.provinceR["广西自治区"] = "45"
-	c.provinceR["广西省自治区"] = "45"
 	c.provinceR["宁夏"] = "64"
 	c.provinceR["宁夏省"] = "64"
 	c.provinceR["宁夏自治区"] = "64"
-	c.provinceR["宁夏省自治区"] = "64"
 	c.provinceR["新疆"] = "65"
 	c.provinceR["新疆省"] = "65"
 	c.provinceR["新疆自治区"] = "65"
-	c.provinceR["新疆省自治区"] = "65"
 	c.provinceR["内蒙古"] = "15"
 	c.provinceR["内蒙古省"] = "15"
-	c.provinceR["内蒙古省自治区"] = "15"
+	c.provinceR["内蒙古自治区"] = "15"
 	c.provinceR["西藏"] = "54"
 	c.provinceR["西藏省"] = "54"
-	c.provinceR["西藏省自治区"] = "54"
+	c.provinceR["西藏自治区"] = "54"
 }
 
 // LoadCity load the city data from a io reader.
@@ -185,12 +180,6 @@ func (c *Client) LoadCity(r io.Reader) {
 		c.cityR[strings.TrimSuffix(name, "市")] = city
 		c.cityR[strings.TrimSuffix(name, "自治州")] = city
 		c.cityR[strings.TrimSuffix(name, "地区")] = city
-
-		// 存储省-市关系
-		if _, ok := c.cityP[line[2]]; !ok {
-			c.cityP[line[2]] = make([]City, 0, 99)
-		}
-		c.cityP[line[2]] = append(c.cityP[line[2]], city)
 	}
 }
 
@@ -230,12 +219,6 @@ func (c *Client) LoadArea(r io.Reader) {
 		c.areaR[fmt.Sprintf("%s-%s", area.CityCode, strings.TrimSuffix(name, "区"))] = area
 		c.areaR[fmt.Sprintf("%s-%s", area.CityCode, strings.TrimSuffix(name, "县"))] = area
 		c.areaR[fmt.Sprintf("%s-%s", area.CityCode, strings.TrimSuffix(name, "旗"))] = area
-
-		// 存储市-区关系
-		if _, ok := c.areaP[line[2]]; !ok {
-			c.areaP[line[2]] = make([]Area, 0, 99)
-		}
-		c.areaP[line[2]] = append(c.areaP[line[2]], area)
 	}
 }
 

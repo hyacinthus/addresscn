@@ -11,73 +11,53 @@ func (c *Client) ParseProvince(name string) (string, error) {
 	return p, nil
 }
 
-// ParseCity 从名字解析市代码
+// ParseCity 从名字解析市
 func (c *Client) ParseCity(name string) (City, error) {
-	p, ok := c.cityR[name]
+	city, ok := c.cityR[name]
 	if !ok {
-		return p, ErrorNotFound
+		return city, ErrorNotFound
 	}
-	return p, nil
+	return city, nil
 }
 
-// FindProvinces 获取省份
-func (c *Client) FindProvinces() map[string]string {
-	return c.province
-}
-
-// FindCitys 获取城市
-func (c *Client) FindCitys(code string) (map[string]string, error) {
-	rows := make(map[string]string)
-	if citys, ok := c.cityP[code]; ok {
-		for _, v := range citys {
-			rows[v.Code] = v.Name
-		}
-		return rows, nil
+// ParseArea 从名字解析区县
+func (c *Client) ParseArea(name string) (Area, error) {
+	area, ok := c.areaR[name]
+	if !ok {
+		return area, ErrorNotFound
 	}
-	return nil, ErrorNotFound
+	return area, nil
 }
 
-// FindAreas 获取县区
-func (c *Client) FindAreas(code string) (map[string]string, error) {
-	rows := make(map[string]string)
-	if areas, ok := c.areaP[code]; ok {
-		for _, v := range areas {
-			rows[v.Code] = v.Name
-		}
-		return rows, nil
-	}
-	return nil, ErrorNotFound
-}
-
-// GetProvinceName 获取省份名称
-func (c *Client) GetProvinceName(code string) (string, error) {
+// ProvinceName 获取省份名称
+func (c *Client) ProvinceName(code string) (string, error) {
 	if name, ok := c.province[code]; ok {
 		return name, nil
 	}
 	return "", ErrorNotFound
 }
 
-// GetCityName 获取市名称
-func (c *Client) GetCityName(code string) (string, error) {
+// CityName 获取市名称
+func (c *Client) CityName(code string) (string, error) {
 	if city, ok := c.city[code]; ok {
 		return city.Name, nil
 	}
 	return "", ErrorNotFound
 }
 
-// GetAreaName 获取县区名称
-func (c *Client) GetAreaName(code string) (string, error) {
+// AreaName 获取县区名称
+func (c *Client) AreaName(code string) (string, error) {
 	if area, ok := c.area[code]; ok {
 		return area.Name, nil
 	}
 	return "", ErrorNotFound
 }
 
-// ParseAddress 解析地址
-func (c *Client) ParseAddress(addr string) (result Address, err error) {
-	cAddr := addr
+// ParseAddress 解析地址 TODO: 这个问题不少，还需要完善
+func (c *Client) ParseAddress(src string) (result Address, err error) {
+	cAddr := src
 	for k, v := range c.provinceR {
-		if strings.HasPrefix(addr, k) {
+		if strings.HasPrefix(src, k) {
 			result.ProvinceCode = v
 			switch k {
 			case "北京":
@@ -89,11 +69,11 @@ func (c *Client) ParseAddress(addr string) (result Address, err error) {
 			case "上海":
 			case "上海市":
 			default:
-				standardName, err := c.GetProvinceName(v)
+				standardName, err := c.ProvinceName(v)
 				if err != nil {
 					return Address{}, err
 				}
-				cAddr = strings.TrimPrefix(addr, standardName)
+				cAddr = strings.TrimPrefix(src, standardName)
 				cAddr = strings.TrimPrefix(cAddr, k)
 				cAddr = strings.TrimPrefix(cAddr, "自治区")
 				cAddr = strings.TrimPrefix(cAddr, "市")
@@ -113,7 +93,7 @@ func (c *Client) ParseAddress(addr string) (result Address, err error) {
 				return
 			}
 			result.CityCode = v.Code
-			standardName, err := c.GetCityName(v.Code)
+			standardName, err := c.CityName(v.Code)
 			if err != nil {
 				return Address{}, err
 			}
@@ -137,13 +117,13 @@ func (c *Client) ParseAddress(addr string) (result Address, err error) {
 		if strings.HasPrefix(aAddr, area[1]) {
 			if result.ProvinceCode == v.ProvinceCode && result.CityCode == v.CityCode {
 				result.AreaCode = v.Code
-				standardName, err := c.GetAreaName(v.Code)
+				standardName, err := c.AreaName(v.Code)
 				if err != nil {
 					return Address{}, err
 				}
-				addr = strings.TrimPrefix(aAddr, standardName)
-				addr = strings.TrimPrefix(aAddr, area[1])
-				result.Detail = strings.TrimPrefix(addr, "旗")
+				src = strings.TrimPrefix(aAddr, standardName)
+				src = strings.TrimPrefix(src, area[1])
+				result.Detail = strings.TrimPrefix(src, "旗")
 				result.Detail = strings.TrimPrefix(result.Detail, "县")
 				result.Detail = strings.TrimPrefix(result.Detail, "区")
 				break
