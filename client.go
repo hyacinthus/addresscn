@@ -106,6 +106,7 @@ func (c *Client) LoadProvince(r io.Reader) {
 		c.provinceR[name] = code
 		// 去除省字再来一遍
 		c.provinceR[strings.TrimSuffix(name, "省")] = code
+		c.provinceR[strings.TrimSuffix(name, "市")] = code
 	}
 	// 特殊处理一些容易被叫错的省 反正能查出来就行
 	c.provinceR["广西"] = "45"
