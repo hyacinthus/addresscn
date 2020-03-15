@@ -54,11 +54,14 @@ func (c *Client) AreaName(code string) (string, error) {
 }
 
 // ParseAddress 解析地址 TODO: 这个问题不少，还需要完善
-func (c *Client) ParseAddress(src string) (result Address, err error) {
+func (c *Client) ParseAddress(src string) (Address, error) {
+	var addr Address
+	// 复制原始值
 	cAddr := src
+	cAddr = strings.TrimPrefix(cAddr, "中国")
 	for k, v := range c.provinceR {
 		if strings.HasPrefix(src, k) {
-			result.ProvinceCode = v
+			addr.ProvinceCode = v
 			switch k {
 			case "北京":
 			case "北京市":
@@ -71,7 +74,7 @@ func (c *Client) ParseAddress(src string) (result Address, err error) {
 			default:
 				standardName, err := c.ProvinceName(v)
 				if err != nil {
-					return Address{}, err
+					return addr, err
 				}
 				cAddr = strings.TrimPrefix(src, standardName)
 				cAddr = strings.TrimPrefix(cAddr, k)
@@ -85,14 +88,13 @@ func (c *Client) ParseAddress(src string) (result Address, err error) {
 	aAddr := cAddr
 	for k, v := range c.cityR {
 		if strings.HasPrefix(cAddr, k) {
-			if len(result.ProvinceCode) == 0 {
-				result.ProvinceCode = v.ProvinceCode
-			} else if result.ProvinceCode != v.ProvinceCode {
+			if len(addr.ProvinceCode) == 0 {
+				addr.ProvinceCode = v.ProvinceCode
+			} else if addr.ProvinceCode != v.ProvinceCode {
 				// 省ID对不上则直接返回，只解析到省
-				err = ErrorInvalidAddr
-				return
+				return addr, ErrorInvalidAddr
 			}
-			result.CityCode = v.Code
+			addr.CityCode = v.Code
 			standardName, err := c.CityName(v.Code)
 			if err != nil {
 				return Address{}, err
@@ -102,36 +104,35 @@ func (c *Client) ParseAddress(src string) (result Address, err error) {
 			aAddr = strings.TrimPrefix(aAddr, "地区")
 			aAddr = strings.TrimPrefix(aAddr, "自治州")
 			aAddr = strings.TrimPrefix(aAddr, "市")
-			if len(result.CityCode) > 0 {
+			if len(addr.CityCode) > 0 {
 				break
 			}
 		}
 	}
 	// 若省市找不到，直接返回，必须包含省市
-	if len(result.ProvinceCode) == 0 || len(result.CityCode) == 0 {
-		err = ErrorInvalidAddr
-		return
+	if len(addr.ProvinceCode) == 0 || len(addr.CityCode) == 0 {
+		return addr, ErrorInvalidAddr
 	}
 	for k, v := range c.areaR {
 		area := strings.Split(k, "-")
 		if strings.HasPrefix(aAddr, area[1]) {
-			if result.ProvinceCode == v.ProvinceCode && result.CityCode == v.CityCode {
-				result.AreaCode = v.Code
+			if addr.ProvinceCode == v.ProvinceCode && addr.CityCode == v.CityCode {
+				addr.AreaCode = v.Code
 				standardName, err := c.AreaName(v.Code)
 				if err != nil {
 					return Address{}, err
 				}
 				src = strings.TrimPrefix(aAddr, standardName)
 				src = strings.TrimPrefix(src, area[1])
-				result.Detail = strings.TrimPrefix(src, "旗")
-				result.Detail = strings.TrimPrefix(result.Detail, "县")
-				result.Detail = strings.TrimPrefix(result.Detail, "区")
+				addr.Detail = strings.TrimPrefix(src, "旗")
+				addr.Detail = strings.TrimPrefix(addr.Detail, "县")
+				addr.Detail = strings.TrimPrefix(addr.Detail, "区")
 				break
 			}
 		}
 	}
-	if len(result.ProvinceCode) == 0 || len(result.CityCode) == 0 || len(result.AreaCode) == 0 {
-		err = ErrorInvalidAddr
+	if addr.ProvinceCode == "" || addr.CityCode == "" || addr.AreaCode == "" {
+		return addr, ErrorInvalidAddr
 	}
-	return
+	return addr, nil
 }

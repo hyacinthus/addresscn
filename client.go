@@ -22,7 +22,7 @@ var (
 // 这些数据在初始化阶段完成写入，提供服务后不再写入，所以只有并行读取，是线程安全的。
 type Client struct {
 	provider string // 数据来源 github(default)/http/cos
-	//url       string // http 模式时 文件的地址前缀 包含最后的斜线
+	// url       string // http 模式时 文件的地址前缀 包含最后的斜线
 	cos       xobj.Client
 	province  map[string]string // code:name
 	provinceR map[string]string // name:code
