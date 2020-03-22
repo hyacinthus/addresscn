@@ -12,6 +12,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/hyacinthus/x v0.0.0-20200302100126-2c352df435a5
 	github.com/kr/pty v1.1.8 // indirect
+	github.com/levigross/grequests v0.0.0-20190908174114-253788527a1a
 	github.com/openzipkin/zipkin-go v0.1.6 // indirect
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect

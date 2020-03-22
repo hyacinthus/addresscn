@@ -11,18 +11,24 @@ import (
 	"strings"
 
 	"github.com/hyacinthus/x/xobj"
+	"github.com/levigross/grequests"
 )
 
 var (
 	ErrorNotFound = errors.New("address code not found")
 )
 
+var (
+	ProviderGithub = "github"
+	ProviderCOS    = "cos"
+)
+
 // Client 地址解析客户端
 // 请调用方保证初始化完成后再使用
 // 这些数据在初始化阶段完成写入，提供服务后不再写入，所以只有并行读取，是线程安全的。
 type Client struct {
-	provider string // 数据来源 github(default)/http/cos
-	// url       string // http 模式时 文件的地址前缀 包含最后的斜线
+	provider  string // 数据来源 github(default)/http/cos
+	base      string // github 和 http 模式时 文件的地址前缀 包含最后的斜线
 	cos       xobj.Client
 	province  map[string]string // code:name
 	provinceR table             // name,code array
@@ -32,44 +38,67 @@ type Client struct {
 	areaR     map[string]table  // city: name,code array
 }
 
-// NewFromCOS 从腾讯云对象存储获取数据 用了我的其他库 内网速度快
-func NewFromCOS(cos xobj.Client) *Client {
+// NewFromReader 从 Reader 初始化
+func NewFromReader(p, c, a io.Reader) *Client {
 	var client = &Client{
-		provider: "cos",
-		cos:      cos,
 		province: make(map[string]string),
 		city:     make(map[string]City),
 		area:     make(map[string]Area),
 		areaR:    make(map[string]table),
 		// 此处不用初始化几个反向映射，后面会新建并赋值
 	}
+	client.LoadProvince(p)
+	client.LoadCity(c)
+	client.LoadArea(a)
+
+	return client
+}
+
+// NewFromCOS 从腾讯云对象存储获取数据 用了我的其他库 内网速度快
+func NewFromCOS(cos xobj.Client) *Client {
 	p, err := cos.Reader("/division/provinces.csv")
 	if err != nil {
 		panic(err)
 	}
-	client.LoadProvince(p)
-	err = p.Close()
-	if err != nil {
-		panic(err)
-	}
+	defer p.Close()
 	c, err := cos.Reader("/division/cities.csv")
 	if err != nil {
 		panic(err)
 	}
-	client.LoadCity(c)
-	err = c.Close()
-	if err != nil {
-		panic(err)
-	}
+	defer c.Close()
 	a, err := cos.Reader("/division/areas.csv")
 	if err != nil {
 		panic(err)
 	}
-	client.LoadArea(a)
-	err = a.Close()
+	defer a.Close()
+	client := NewFromReader(p, c, a)
+	client.provider = ProviderGithub
+	client.cos = cos
+	return client
+}
+
+// NewFromGithub 从 modood/Administrative-divisions-of-China 库初始化
+func NewFromGithub() *Client {
+	var base = "https://raw.githubusercontent.com/modood/Administrative-divisions-of-China/master/dist/"
+	p, err := grequests.Get(base+"provinces.csv", nil)
 	if err != nil {
 		panic(err)
 	}
+	defer p.Close()
+	c, err := grequests.Get(base+"cities.csv", nil)
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+	a, err := grequests.Get(base+"areas.csv", nil)
+	if err != nil {
+		panic(err)
+	}
+	defer a.Close()
+
+	client := NewFromReader(p, c, a)
+	client.provider = ProviderGithub
+	client.base = base
 	return client
 }
 
@@ -356,5 +385,11 @@ func (c *Client) LoadArea(r io.Reader) {
 
 // GetPCA load the province city area stream from cos.
 func (c *Client) GetPCA() (io.ReadCloser, error) {
-	return c.cos.Reader("/division/pca-code.json")
+	switch c.provider {
+	case ProviderGithub:
+		return grequests.Get(c.base+"pca-code.json", nil)
+	case ProviderCOS:
+		return c.cos.Reader("/division/pca-code.json")
+	}
+	return nil, errors.New("没有可用的数据源")
 }

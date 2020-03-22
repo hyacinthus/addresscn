@@ -70,7 +70,8 @@ func (c *Client) ParseAddress(src string) (Address, error) {
 		return addr, err
 	}
 	// 去掉空格和标点
-	cur := strings.ReplaceAll(src, " ", "")
+	cur := strings.TrimSpace(src)
+	cur = strings.ReplaceAll(cur, " ", "")
 	cur = strings.ReplaceAll(cur, ",", "")
 	cur = strings.ReplaceAll(cur, "，", "")
 	cur = strings.ReplaceAll(cur, "。", "")
