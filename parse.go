@@ -1,32 +1,29 @@
 package addresscn
 
-import "strings"
+import (
+	"errors"
+	"strings"
+	"unicode/utf8"
+)
 
 // ParseProvince 从名字解析省份代码
 func (c *Client) ParseProvince(name string) (string, error) {
-	p, ok := c.provinceR[name]
-	if !ok {
-		return "", ErrorNotFound
+	for _, item := range c.provinceR {
+		if name == item.name {
+			return item.code, nil
+		}
 	}
-	return p, nil
+	return "", ErrorNotFound
 }
 
 // ParseCity 从名字解析市
 func (c *Client) ParseCity(name string) (City, error) {
-	city, ok := c.cityR[name]
-	if !ok {
-		return city, ErrorNotFound
+	for _, item := range c.cityR {
+		if name == item.name {
+			return c.city[item.code], nil
+		}
 	}
-	return city, nil
-}
-
-// ParseArea 从名字解析区县
-func (c *Client) ParseArea(name string) (Area, error) {
-	area, ok := c.areaR[name]
-	if !ok {
-		return area, ErrorNotFound
-	}
-	return area, nil
+	return City{}, ErrorNotFound
 }
 
 // ProvinceName 获取省份名称
@@ -53,86 +50,84 @@ func (c *Client) AreaName(code string) (string, error) {
 	return "", ErrorNotFound
 }
 
-// ParseAddress 解析地址 TODO: 这个问题不少，还需要完善
+// MustParseAddress 解析地址 报告任何错误
+func (c *Client) MustParseAddress(src string) (Address, error) {
+	addr, err := c.ParseAddress(src)
+	if err != nil {
+		return addr, err
+	}
+	if addr.AreaCode == "" || addr.Detail == "" {
+		return addr, errors.New("解析地址失败：" + src)
+	}
+	return addr, nil
+}
+
+// ParseAddress 解析地址 省市解析成功就算成功 忽略区解析失败的错误
 func (c *Client) ParseAddress(src string) (Address, error) {
 	var addr Address
-	// 复制原始值
-	cAddr := src
-	cAddr = strings.TrimPrefix(cAddr, "中国")
-	for k, v := range c.provinceR {
-		if strings.HasPrefix(src, k) {
-			addr.ProvinceCode = v
-			switch k {
-			case "北京":
-			case "北京市":
-			case "天津":
-			case "天津市":
-			case "重庆":
-			case "重庆市":
-			case "上海":
-			case "上海市":
-			default:
-				standardName, err := c.ProvinceName(v)
-				if err != nil {
-					return addr, err
-				}
-				cAddr = strings.TrimPrefix(src, standardName)
-				cAddr = strings.TrimPrefix(cAddr, k)
-				cAddr = strings.TrimPrefix(cAddr, "自治区")
-				cAddr = strings.TrimPrefix(cAddr, "市")
-				cAddr = strings.TrimPrefix(cAddr, "省")
+	var err = errors.New("解析地址失败：" + src)
+	if utf8.RuneCountInString(src) < 6 {
+		return addr, err
+	}
+	// 去掉空格和标点
+	cur := strings.ReplaceAll(src, " ", "")
+	cur = strings.ReplaceAll(cur, ",", "")
+	cur = strings.ReplaceAll(cur, "，", "")
+	cur = strings.ReplaceAll(cur, "。", "")
+	cur = strings.TrimPrefix(cur, "中国")
+	// 开始解析省份
+	for _, pr := range c.provinceR {
+		if strings.HasPrefix(cur, pr.name) {
+			addr.ProvinceCode = pr.code
+			cur = strings.TrimPrefix(cur, pr.name)
+			// 如果是直辖市，直接确定市级code，后续不再解析市，另外兼容写两遍市和写市辖区的情况
+			if pr.code == "11" {
+				addr.CityCode = "1101"
+				cur = strings.TrimPrefix(cur, pr.name)
+				cur = strings.TrimPrefix(cur, "市辖区")
 			}
+			if pr.code == "12" {
+				addr.CityCode = "1201"
+				cur = strings.TrimPrefix(cur, pr.name)
+				cur = strings.TrimPrefix(cur, "市辖区")
+			}
+			if pr.code == "31" {
+				addr.CityCode = "3101"
+				cur = strings.TrimPrefix(cur, pr.name)
+				cur = strings.TrimPrefix(cur, "市辖区")
+			}
+			if pr.code == "50" {
+				addr.CityCode = "5001"
+				cur = strings.TrimPrefix(cur, pr.name)
+				cur = strings.TrimPrefix(cur, "市辖区")
+			}
+			// 解析到了就跳出省份解析
 			break
 		}
 	}
-	aAddr := cAddr
-	for k, v := range c.cityR {
-		if strings.HasPrefix(cAddr, k) {
-			if len(addr.ProvinceCode) == 0 {
-				addr.ProvinceCode = v.ProvinceCode
-			} else if addr.ProvinceCode != v.ProvinceCode {
-				// 省ID对不上则直接返回，只解析到省
-				return addr, ErrorInvalidAddr
-			}
-			addr.CityCode = v.Code
-			standardName, err := c.CityName(v.Code)
-			if err != nil {
-				return Address{}, err
-			}
-			aAddr = strings.TrimPrefix(cAddr, standardName)
-			aAddr = strings.TrimPrefix(aAddr, k)
-			aAddr = strings.TrimPrefix(aAddr, "地区")
-			aAddr = strings.TrimPrefix(aAddr, "自治州")
-			aAddr = strings.TrimPrefix(aAddr, "市")
-			if len(addr.CityCode) > 0 {
-				break
+	// 开始解析市
+	if addr.CityCode == "" {
+		for _, ci := range c.cityR {
+			if strings.HasPrefix(cur, ci.name) {
+				addr.CityCode = ci.code
+				cur = strings.TrimPrefix(cur, ci.name)
 			}
 		}
 	}
-	// 若省市找不到，直接返回，必须包含省市
-	if len(addr.ProvinceCode) == 0 || len(addr.CityCode) == 0 {
-		return addr, ErrorInvalidAddr
+	// 开始解析区 因为要用到城市 所以城市如果没有解析成功则失败退出
+	if addr.CityCode == "" {
+		addr.Detail = cur
+		return addr, err
 	}
-	for k, v := range c.areaR {
-		area := strings.Split(k, "-")
-		if strings.HasPrefix(aAddr, area[1]) {
-			if addr.ProvinceCode == v.ProvinceCode && addr.CityCode == v.CityCode {
-				addr.AreaCode = v.Code
-				standardName, err := c.AreaName(v.Code)
-				if err != nil {
-					return Address{}, err
-				}
-				src = strings.TrimPrefix(aAddr, standardName)
-				src = strings.TrimPrefix(src, area[1])
-				addr.Detail = strings.TrimPrefix(src, "旗")
-				addr.Detail = strings.TrimPrefix(addr.Detail, "县")
-				addr.Detail = strings.TrimPrefix(addr.Detail, "区")
-				break
-			}
+	for _, ar := range c.areaR[addr.CityCode] {
+		if strings.HasPrefix(cur, ar.name) {
+			addr.AreaCode = ar.code
+			cur = strings.TrimPrefix(cur, ar.name)
 		}
 	}
-	if addr.ProvinceCode == "" || addr.CityCode == "" || addr.AreaCode == "" {
-		return addr, ErrorInvalidAddr
-	}
+	// 剩下的是详情
+	addr.Detail = cur
+
+	// 能到这里省市肯定解析成功了，区没有解析成功不报错
 	return addr, nil
 }

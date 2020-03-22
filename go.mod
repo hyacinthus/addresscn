@@ -15,6 +15,7 @@ require (
 	github.com/openzipkin/zipkin-go v0.1.6 // indirect
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
+	github.com/stretchr/testify v1.4.0
 	github.com/tencentyun/cos-go-sdk-v5 v0.0.0-20200311031902-5eb2ce1f587d // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	golang.org/x/mobile v0.0.0-20190814143026-e8b3e6111d02 // indirect
