@@ -72,7 +72,7 @@ func NewFromCOS(cos xobj.Client) *Client {
 	}
 	defer a.Close()
 	client := NewFromReader(p, c, a)
-	client.provider = ProviderGithub
+	client.provider = ProviderCOS
 	client.cos = cos
 	return client
 }
