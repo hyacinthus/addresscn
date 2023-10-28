@@ -19,7 +19,7 @@ func TestParseAddress(t *testing.T) {
 			dst: Address{
 				ProvinceCode: "34",
 				CityCode:     "3401",
-				AreaCode:     "340171",
+				AreaCode:     "340176",
 				Detail:       "柏堰科技园石楠路13号",
 			},
 		},

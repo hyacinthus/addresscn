@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hyacinthus/x/xobj"
+	"github.com/hack-fan/x/xobj"
 	"github.com/levigross/grequests"
 )
 
@@ -56,17 +56,17 @@ func NewFromReader(p, c, a io.Reader) *Client {
 
 // NewFromCOS 从腾讯云对象存储获取数据 用了我的其他库 内网速度快
 func NewFromCOS(cos xobj.Client) *Client {
-	p, err := cos.Reader("/division/provinces.csv")
+	p, err := cos.GetReader("/division/provinces.csv")
 	if err != nil {
 		panic(err)
 	}
 	defer p.Close()
-	c, err := cos.Reader("/division/cities.csv")
+	c, err := cos.GetReader("/division/cities.csv")
 	if err != nil {
 		panic(err)
 	}
 	defer c.Close()
-	a, err := cos.Reader("/division/areas.csv")
+	a, err := cos.GetReader("/division/areas.csv")
 	if err != nil {
 		panic(err)
 	}
@@ -389,7 +389,7 @@ func (c *Client) GetPCA() (io.ReadCloser, error) {
 	case ProviderGithub:
 		return grequests.Get(c.base+"pca-code.json", nil)
 	case ProviderCOS:
-		return c.cos.Reader("/division/pca-code.json")
+		return c.cos.GetReader("/division/pca-code.json")
 	}
 	return nil, errors.New("没有可用的数据源")
 }
